@@ -1,5 +1,5 @@
 """
-Authentication routes for Solana wallet-based authentication
+Authentication routes for Solana wallet-based authentication and OAuth
 """
 from fastapi import APIRouter, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -11,10 +11,13 @@ from models.schemas import (
     WalletAuthResponse,
     WalletVerifyRequest,
     TokenResponse,
-    UserProfile
+    UserProfile,
+    GoogleAuthRequest,
+    GoogleAuthResponse
 )
 from services.auth_service import AuthService
 from middleware.auth_middleware import get_current_user
+from config import settings
 
 router = APIRouter()
 security = HTTPBearer()
@@ -137,4 +140,116 @@ async def logout(current_user: dict = Depends(get_current_user)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Logout failed: {str(e)}"
+        )
+
+@router.get("/google/login")
+async def google_login():
+    """
+    Initiate Google OAuth flow
+    
+    Returns the Google OAuth authorization URL
+    """
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="Google OAuth is not configured"
+        )
+    
+    auth_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={settings.GOOGLE_CLIENT_ID}&"
+        f"redirect_uri={settings.GOOGLE_REDIRECT_URI}&"
+        f"response_type=code&"
+        f"scope=openid email profile&"
+        f"access_type=offline"
+    )
+    
+    return {
+        "auth_url": auth_url,
+        "redirect_uri": settings.GOOGLE_REDIRECT_URI
+    }
+
+@router.post("/google/callback", response_model=TokenResponse)
+async def google_callback(request: GoogleAuthRequest):
+    """
+    Handle Google OAuth callback
+    
+    Exchange authorization code for user info and issue JWT token
+    """
+    try:
+        # Verify Google token and get user info
+        user_info = await auth_service.verify_google_token(
+            code=request.code,
+            redirect_uri=request.redirect_uri
+        )
+        
+        if not user_info or not user_info.get("verified_email"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Failed to verify Google account"
+            )
+        
+        email = user_info["email"]
+        
+        # Create JWT token
+        token_data = await auth_service.create_access_token(
+            email=email,
+            auth_method="google"
+        )
+        
+        return TokenResponse(
+            access_token=token_data["access_token"],
+            token_type="bearer",
+            expires_in=token_data["expires_in"],
+            wallet_address=None,
+            email=email,
+            auth_method="google"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Google authentication failed: {str(e)}"
+        )
+
+@router.post("/link-wallet")
+async def link_wallet(
+    wallet_address: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Link a Solana wallet to an authenticated Google account
+    
+    Protected route - requires valid JWT token from Google auth
+    """
+    try:
+        if current_user.get("auth_method") != "google":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="This endpoint is for linking wallets to Google accounts"
+            )
+        
+        email = current_user.get("email")
+        success = await auth_service.link_wallet_to_email(email, wallet_address)
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to link wallet"
+            )
+        
+        return {
+            "message": "Wallet linked successfully",
+            "email": email,
+            "wallet_address": wallet_address
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to link wallet: {str(e)}"
         )

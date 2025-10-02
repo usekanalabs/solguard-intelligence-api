@@ -104,6 +104,8 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int = Field(..., description="Token expiration in seconds")
     wallet_address: str
+    email: Optional[str] = None
+    auth_method: str = Field(default="wallet", description="Authentication method used")
 
 class UserProfile(BaseModel):
     """User profile model"""
@@ -111,3 +113,20 @@ class UserProfile(BaseModel):
     created_at: datetime
     last_login: datetime
     preferences: Dict[str, Any] = Field(default_factory=dict)
+    email: Optional[str] = None
+    auth_method: str = Field(default="wallet", description="Primary authentication method")
+    linked_accounts: List[str] = Field(default_factory=list, description="Linked authentication methods")
+
+class GoogleAuthRequest(BaseModel):
+    """Request model for Google OAuth"""
+    code: str = Field(..., description="Authorization code from Google")
+    redirect_uri: str = Field(..., description="Redirect URI used in OAuth flow")
+
+class GoogleAuthResponse(BaseModel):
+    """Response model for Google OAuth"""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    email: str
+    wallet_address: Optional[str] = None
+    auth_method: str = "google"
