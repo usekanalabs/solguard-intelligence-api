@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     MAX_RISK_SCORE: float = 0.7
     THREAT_DETECTION_ENABLED: bool = True
     
+    # JWT Authentication
+    JWT_SECRET_KEY: str = "your-secret-key-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRATION_HOURS: int = 24
+    
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
     

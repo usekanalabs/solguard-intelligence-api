@@ -81,3 +81,33 @@ class ThreatDetectionResponse(BaseModel):
     analysis: str
     should_proceed: bool
     timestamp: datetime
+
+class WalletAuthRequest(BaseModel):
+    """Request model for wallet authentication challenge"""
+    wallet_address: str = Field(..., description="Solana wallet address")
+
+class WalletAuthResponse(BaseModel):
+    """Response model for authentication challenge"""
+    challenge: str = Field(..., description="Challenge message to sign")
+    expires_at: datetime = Field(..., description="Challenge expiration time")
+    wallet_address: str
+
+class WalletVerifyRequest(BaseModel):
+    """Request model for signature verification"""
+    wallet_address: str = Field(..., description="Solana wallet address")
+    signature: str = Field(..., description="Base58 encoded signature")
+    message: str = Field(..., description="Original challenge message")
+
+class TokenResponse(BaseModel):
+    """Response model for JWT token"""
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = Field(..., description="Token expiration in seconds")
+    wallet_address: str
+
+class UserProfile(BaseModel):
+    """User profile model"""
+    wallet_address: str
+    created_at: datetime
+    last_login: datetime
+    preferences: Dict[str, Any] = Field(default_factory=dict)

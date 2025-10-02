@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import uvicorn
 
-from routes import coin_analyzer, wallet_assistant, security
+from routes import coin_analyzer, wallet_assistant, security, auth
 from config import settings
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(coin_analyzer.router, prefix="/api/v1/coin", tags=["Coin Analyzer"])
 app.include_router(wallet_assistant.router, prefix="/api/v1/wallet", tags=["Wallet Assistant"])
 app.include_router(security.router, prefix="/api/v1/security", tags=["Security"])
