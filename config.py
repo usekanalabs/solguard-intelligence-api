@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: str = ""
     AI_MODEL: str = "gpt-4"
     
+    # GMGN.AI API configuration
+    GMGN_API_BASE_URL: str = "https://gmgn.ai"
+    GMGN_WS_URL: str = "wss://gmgn.ai/ws"
+    
     # Solana Configuration
     SOLANA_RPC_URL: str = "https://api.mainnet-beta.solana.com"
     SOLANA_NETWORK: str = "mainnet-beta"

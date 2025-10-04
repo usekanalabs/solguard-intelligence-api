@@ -130,3 +130,84 @@ class GoogleAuthResponse(BaseModel):
     email: str
     wallet_address: Optional[str] = None
     auth_method: str = "google"
+
+# Signal-related schemas
+class SignalType(str, Enum):
+    BUY = "buy"
+    SELL = "sell"
+    HOLD = "hold"
+    ALERT = "alert"
+
+class SignalStrength(str, Enum):
+    WEAK = "weak"
+    MODERATE = "moderate"
+    STRONG = "strong"
+    VERY_STRONG = "very_strong"
+
+class TrendingTokenRequest(BaseModel):
+    """Request model for trending tokens"""
+    time_period: str = Field(default="24h", description="Time period: 5m, 1h, 6h, 24h")
+    limit: int = Field(default=20, ge=1, le=100, description="Number of tokens to return")
+    order_by: str = Field(default="volume", description="Order by: volume, swaps, price_change")
+
+class TrendingTokenResponse(BaseModel):
+    """Response model for trending token"""
+    token_address: str
+    token_name: str
+    token_symbol: str
+    price: float
+    price_change_24h: float
+    volume_24h: float
+    liquidity: float
+    market_cap: Optional[float]
+    swaps_24h: int
+    holders: int
+    risk_score: float
+    timestamp: datetime
+
+class SignalRequest(BaseModel):
+    """Request model for trading signal generation"""
+    token_address: Optional[str] = Field(default=None, description="Specific token to analyze")
+    wallet_address: Optional[str] = Field(default=None, description="User wallet for personalized signals")
+    signal_types: List[SignalType] = Field(default=[SignalType.BUY, SignalType.SELL], description="Types of signals to generate")
+    min_strength: SignalStrength = Field(default=SignalStrength.MODERATE, description="Minimum signal strength")
+
+class TradingSignal(BaseModel):
+    """Trading signal model"""
+    signal_id: str
+    token_address: str
+    token_name: str
+    token_symbol: str
+    signal_type: SignalType
+    signal_strength: SignalStrength
+    confidence: float = Field(..., ge=0, le=1, description="AI confidence score")
+    price: float
+    target_price: Optional[float]
+    stop_loss: Optional[float]
+    reasoning: str
+    key_factors: List[str]
+    risk_level: RiskLevel
+    timestamp: datetime
+    expires_at: datetime
+
+class SignalResponse(BaseModel):
+    """Response model for signals"""
+    signals: List[TradingSignal]
+    market_overview: Dict[str, Any]
+    ai_summary: str
+    timestamp: datetime
+
+class SignalSubscriptionRequest(BaseModel):
+    """Request model for signal subscription"""
+    wallet_address: str
+    signal_types: List[SignalType] = Field(default=[SignalType.BUY, SignalType.SELL, SignalType.ALERT])
+    min_strength: SignalStrength = Field(default=SignalStrength.MODERATE)
+    tokens: Optional[List[str]] = Field(default=None, description="Specific tokens to monitor")
+
+class SignalSubscriptionResponse(BaseModel):
+    """Response model for signal subscription"""
+    subscription_id: str
+    wallet_address: str
+    active: bool
+    created_at: datetime
+    settings: Dict[str, Any]
